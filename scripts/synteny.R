@@ -30,14 +30,62 @@ p1 %>%  flip_seqs(Tupanvirus_soda_lake)
 
 # Just focusing on group 5 for now. Adding TIR annotation
 
+gp5_genes <- read_bed("data/synteny/gd_tupan.bed") 
+gp5_genes$feat_id <- gp5_genes$name
+gp5_prot_link <- read_blast("data/synteny/gd_tupan_prot_blastp.tsv") %>% 
+  dplyr::filter(bitscore > 50)
+
 tir_gp5_paf <- read_paf("data/synteny/grp_5_TIR_minimap.paf") %>%
   dplyr::filter(seq_id == seq_id2 & start < start2 & map_length > 99 & de < 0.1)
+
+
 tir_gp5 <- dplyr::bind_rows(
   dplyr::select(tir_gp5_paf, seq_id=seq_id, start=start, end=end, de),
   dplyr::select(tir_gp5_paf, seq_id=seq_id2, start=start2, end=end2, de))
 
-gp5 <- gggenomes(seqs = seqs[seqs$group == "grp_5",], links = links, feats = tir_gp5) + 
+gp5 <- gggenomes(seqs = seqs[seqs$group == "grp_5",],genes = gp5_genes , links = links, feats = tir_gp5) + 
   geom_seq() + geom_bin_label() +
+  geom_gene() +
   geom_feat(colour = "darkred",  linewidth = 15, position = "identity") +
   geom_link()
 gp5 %>%  flip_seqs(Tupanvirus_soda_lake)
+
+
+colnames(gp5_prot_link)[1:2] <- c("feat_id", "feat_id2")
+prot_gp5 <- gggenomes(seqs = seqs[seqs$group == "grp_5",],genes = gp5_genes , feats = tir_gp5) %>% 
+  flip_seqs(Tupanvirus_soda_lake) %>% 
+  add_sublinks(gp5_prot_link) + 
+  geom_seq() + geom_bin_label() +
+  geom_gene() +
+  geom_feat(colour = "darkred",  linewidth = 15, position = "identity") +
+  geom_link_line(aes(color = pident))
+prot_gp5
+
+# The protein links don't work well because there's a lot of hits to paralogs and just a lot of genes
+# Interestingly, the MAG has some protein matching hits to Tupanvirus in the region which does not have high nucleotide similarity to Tupanvirus
+
+# Now to color the genes using Eggnog functional annotation and VOG viral function annotation
+
+
+gene_annot <- read.table("data/synteny/non_Xu_vog_hmmsrch_cat_proteins_with_genome_name.tsv",
+                        sep = "\t", header = T)
+
+vog_cat <- read.table("data/synteny/non_Xu_vog.annotations.tsv", sep = "\t", header = T,
+                      quote = "")
+
+colnames(vog_cat)[1] <- "Target_name"
+
+merge_annot_cat <- left_join(gene_annot, vog_cat, by = "Target_name")
+
+length(unique(merge_annot_cat$FunctionalCategory))
+
+gp5_gene_annot <- merge_annot_cat %>%  filter(Query %in% c("Tupanvirus_soda_lake", "GD2017_2_strous"))
+
+
+
+
+
+
+
+
+
