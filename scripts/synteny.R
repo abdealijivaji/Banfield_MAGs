@@ -20,7 +20,7 @@ seqs <- seqs %>% dplyr::left_join(grp_list, by = "bin_id")
 #genes <- read_subfeats("data/synteny/cat_proteins.faa")
 links <- read_paf("data/synteny/cat_minimap.paf", max_tags = 32)
 
-
+gc_50bp <- read_bed("data/synteny/")
 
 p1 <- gggenomes(seqs = seqs, links = links) + 
   geom_seq() + geom_bin_label() +
@@ -81,11 +81,43 @@ length(unique(merge_annot_cat$FunctionalCategory))
 
 gp5_gene_annot <- merge_annot_cat %>%  filter(Query %in% c("Tupanvirus_soda_lake", "GD2017_2_strous"))
 
+table(gp5_gene_annot$FunctionalCategory)
+
+vog_gene_bed <- data.frame(
+  seq_id = gp5_gene_annot$Query ,
+  start = gp5_gene_annot$start ,
+  end = gp5_gene_annot$end ,
+  name = gp5_gene_annot$FunctionalCategory ,
+  score = gp5_gene_annot$score ,
+  strand = gp5_gene_annot$strand ,
+  feat_id = gp5_gene_annot$Query_name 
+)
+
+vog_gene_bed$strand <- gsub("-1", "-", vog_gene_bed$strand)
+vog_gene_bed$strand <- gsub("1", "+", vog_gene_bed$strand)
 
 
+# Replacing multi_function vog hit as " Multi-function" and rest as their respective category
 
+vog_func_type <- data.frame(name = unique(vog_gene_bed$name))
+vog_func_type$FuncCat <- c("Multi Functional", "Multi Functional", "Beneficial to Host", 
+                           "Structural", "Multi Functional", "Replication", 
+                           "Multi Functional", "Beneficial to Virus", "Multi Functional",
+                           "Multi Functional")
 
+vog_gene_bed <- left_join(vog_gene_bed, vog_func_type, by = "name")
 
+vog_gp5 <- gggenomes(seqs = seqs[seqs$group == "grp_5",],genes = vog_gene_bed[!(vog_gene_bed$FuncCat == "Beneficial to Host"),] , 
+                     feats = tir_gp5, links = links) %>% 
+  flip_seqs(GD2017_2_strous) + 
+  geom_seq() + geom_bin_label() +
+#  geom_gene() +
+  geom_feat(colour = "darkred",  linewidth = 15, position = "identity") +
+  geom_link()
+vog_gp5 + 
+  geom_gene(size = 15 , aes(color = FuncCat, fill = FuncCat)) +
+  scale_x_bp(n.breaks = 20, suffix = "bp", sep = " ", accuracy = 0.01)
 
-
+# The unmatched region in Tupanvirus is roughly from 1.1 Mb till 1.25 Mb so ~ 150 Kb chunk.
+# This region is on the 3' end of tupanvirus but the flanking region matching to the MAG is on the 5' end of the MAG
 
