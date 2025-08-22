@@ -125,3 +125,19 @@ vog_gp5 +
 # The unmatched region in Tupanvirus is roughly from 1.1 Mb till 1.25 Mb so ~ 150 Kb chunk.
 # This region is on the 3' end of tupanvirus but the flanking region matching to the MAG is on the 5' end of the MAG
 
+
+# vog categories not working out. Let's add translation related categories
+
+trans_genes <- read_bed("data/synteny/translation_gene.bed")
+gp5_seqs <- seqs[seqs$group == "grp_5",]
+gp5_seqs <- gp5_seqs[!(gp5_seqs$seq_id == "Tupanvirus_deep_ocean"),]
+
+trans_plot <- gggenomes(seqs = gp5_seqs, genes = trans_genes, links = gp5_links,
+                        feats = list(tir_gp5, gp5_gc)) %>% 
+  flip_seqs(GD2017_2_strous) +
+  geom_seq() + geom_bin_label()
+trans_plot +
+  geom_gene(aes(fill = name, color = name), size = 12) +
+  geom_feat(data = feats(tir_gp5), colour = "darkred",  linewidth = 15, position = "identity") +
+  #geom_wiggle(data = feats(gp5_gc),  aes(z = score), fill = "lavenderblush3", offset = -.3, height = .5 ) +
+  geom_link()
